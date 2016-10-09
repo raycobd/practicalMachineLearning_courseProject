@@ -1,0 +1,146 @@
+---
+output: html_document
+---
+ 
+#Practical machine learning Course Project: "Human Action Recognition - HAR"
+##Author: Rayco Batista Diaz
+
+###Introducction
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise.
+
+
+Note: The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har.
+
+
+###Initialization
+```{r}
+#Initialization
+library(caret)
+library(plot3D)
+library(randomForest)
+
+
+#Loading data
+dataUrl = 'https://d396qusza40orc.cloudfront.net/predmachlearn/';
+trainingDataFile <- "pml-training.csv"
+testDataFile <- "pml-testing.csv"
+
+if(!file.exists(trainingDataFile)){
+  download.file(paste(dataUrl,trainingDataFile,sep=""), destfile = trainingDataFile, method = "curl")
+}
+if(!file.exists(testDataFile)){
+  download.file(paste(dataUrl,testDataFile,sep=""), destfile = testDataFile, method = "curl")
+}
+
+trainingDataSet = read.csv(trainingDataFile, na.strings=c("NA",""))
+testDataSet = read.csv(testDataFile,na.strings=c("NA",""))
+
+
+#Data cleaning
+
+
+```
+
+
+###Data cleaning
+The data sets contains 160 variable for boths test and training data set, and respectevely 20 and 19622 observations for them.
+
+Let's inspect the data to find NA values
+```{r}
+#calculate NA values in or datasets
+trainingDataSet_has_na <- apply(trainingDataSet, 2, function(x){any(is.na(x))})
+testDataSet_has_na <- apply(testDataSet, 2, function(x){any(is.na(x))})
+
+#Review variables with NA
+sum(trainingDataSet_has_na)
+
+```
+The research reveals that there is a high value of variable with not fully complete data. In this case we have different options, set a threshold based on % of NA to eliminate a variable or directly remove all variables with at least one NA value. 
+
+In this case seems reaseanable to remove all variables with at least one NA values and analize them so we don't assume variables that can drive errors into our study.
+
+```{r}
+trainingDataSet_clean <- trainingDataSet[,!trainingDataSet_has_na]
+testDataSet_clean <- testDataSet[,!testDataSet_has_na]
+```
+
+Finally we preview the data to make sure everything it is as expected
+
+```{r,fig.width=5, fig.height=3.5}
+suppressWarnings(plot3D::points3D(
+  trainingDataSet_clean$magnet_forearm_x, 
+  trainingDataSet_clean$magnet_forearm_y, 
+  trainingDataSet_clean$magnet_forearm_z, 
+  col=trainingDataSet_clean$classe,
+  main="Forearm by Activity",
+  pch=10, cex=0.8
+))
+```
+
+We can appreciate how the the range of movement change based on the activity type, so we can start with prediction now that the data is ready.
+
+
+###Building the model
+
+####Predictors
+In order to provide more accurate and useful prediction algorithm it is neccesary to preprocess the predictors. So I am going to filter the data for generate the transformation the prediction model will require, in this case center and scale the variables.
+
+```{r}
+#Filter for numeric and logical variables
+filteredType <- which(lapply(trainingDataSet_clean, class) %in% c("numeric", "logical") ) 
+preprocessData <- preProcess(trainingDataSet_clean[, filteredType],method=c("center","scale"))
+trainedVariables <- predict(preprocessData, trainingDataSet_clean[, filteredType])
+
+# adding the activity type "classe"
+trainedVariables$classe <- trainingDataSet_clean$classe
+```
+
+
+####Prediction model
+We are tackling a multiclass classification problem, we have multiple choises for the model that will serve for our purpose (Random Forest, CART, glm, GBM, ...). Since the number of variables for our model is very high, and we know from theory that the Random Forest are harder to overfit, seems a good election for this study.
+
+Before hand we will divide our training set with an usual standard 80:20 for training and validation.  
+
+```{r}
+set.seed(12345)
+filter_training_data <- createDataPartition(y=trainingDataSet_clean$classe,p=0.80, list=FALSE)
+trainingModelData <- trainedVariables[filter_training_data,]
+testingModelData <- trainedVariables[-filter_training_data,]
+```
+
+Now we are all set for train the model
+```{r}
+modFit <- train(classe ~ ., data = trainingModelData, method = "rf",prox=TRUE, allowParallel=TRUE, trControl=trainControl(method='cv'))
+```
+
+
+###Cross validation
+
+Plot the model to explore the accuracy.
+```{r}
+plot(modFit)
+```
+
+Now let's check the accuracy of our model and also perform a cross validation with the validation data set obtained in previous steps
+```{r}
+# Measure accuracy of our model
+trainingPrediction <- predict(modFit, trainingModelData)
+confusionMatrix(trainingPrediction, trainingModelData$classe)
+```
+
+```{r}
+# Cross validation
+crossValidation <- predict(modFit, testingModelData)
+confusionMatrix(crossValidation, testingModelData$classe)
+```
+
+As it is expected, the accuracy for this validation data set has a high accuracy sucess rate 0.9993 with a P-value inferior to 2.2e-16, the next step in the study will be make the predictions
+
+###Prediction and test cases.
+In this final section of the research we are going to predict the test dataset proposed in the description of the study.
+
+```{r}
+prediction <- predict(modFit,testDataSet_clean )
+prediction
+```
+
