@@ -91,6 +91,8 @@ filteredType <- which(lapply(trainingDataSet_clean, class) %in% c("numeric", "lo
 preprocessData <- preProcess(trainingDataSet_clean[, filteredType],method=c("center","scale"))
 trainedVariables <- predict(preprocessData, trainingDataSet_clean[, filteredType])
 
+testDataSet_clean <- predict(preprocessData, testDataSet_clean[, filteredType])
+
 # adding the activity type "classe"
 trainedVariables$classe <- trainingDataSet_clean$classe
 ```
@@ -110,7 +112,9 @@ testingModelData <- trainedVariables[-filter_training_data,]
 
 Now we are all set for train the model
 ```{r}
-modFit <- train(classe ~ ., data = trainingModelData, method = "rf",prox=TRUE, allowParallel=TRUE, trControl=trainControl(method='cv'))
+library(doMC)
+registerDoMC(cores = 8)
+modFit <- train(classe ~ ., data = trainingModelData, method = "rf",trControl=trainControl(method='cv'))
 ```
 
 
@@ -138,7 +142,7 @@ As it is expected, the accuracy for this validation data set has a high accuracy
 
 ###Prediction and test cases.
 In this final section of the research we are going to predict the test dataset proposed in the description of the study.
-
+ 
 ```{r}
 prediction <- predict(modFit,testDataSet_clean )
 prediction

@@ -197,6 +197,8 @@ filteredType &lt;- which(lapply(trainingDataSet_clean, class) %in% c(&quot;numer
 preprocessData &lt;- preProcess(trainingDataSet_clean[, filteredType],method=c(&quot;center&quot;,&quot;scale&quot;))
 trainedVariables &lt;- predict(preprocessData, trainingDataSet_clean[, filteredType])
 
+testDataSet_clean &lt;- predict(preprocessData, testDataSet_clean[, filteredType])
+
 # adding the activity type &quot;classe&quot;
 trainedVariables$classe &lt;- trainingDataSet_clean$classe</code></pre>
 </div>
@@ -209,7 +211,12 @@ filter_training_data &lt;- createDataPartition(y=trainingDataSet_clean$classe,p=
 trainingModelData &lt;- trainedVariables[filter_training_data,]
 testingModelData &lt;- trainedVariables[-filter_training_data,]</code></pre>
 <p>Now we are all set for train the model</p>
-<pre class="r"><code>modFit &lt;- train(classe ~ ., data = trainingModelData, method = &quot;rf&quot;,prox=TRUE, allowParallel=TRUE, trControl=trainControl(method='cv'))</code></pre>
+<pre class="r"><code>library(doMC)</code></pre>
+<pre><code>## Loading required package: foreach</code></pre>
+<pre><code>## Loading required package: iterators</code></pre>
+<pre><code>## Loading required package: parallel</code></pre>
+<pre class="r"><code>registerDoMC(cores = 8)
+modFit &lt;- train(classe ~ ., data = trainingModelData, method = &quot;rf&quot;,trControl=trainControl(method='cv'))</code></pre>
 </div>
 </div>
 <div id="cross-validation" class="section level3">
@@ -293,7 +300,7 @@ confusionMatrix(crossValidation, testingModelData$classe)</code></pre>
 <p>In this final section of the research we are going to predict the test dataset proposed in the description of the study.</p>
 <pre class="r"><code>prediction &lt;- predict(modFit,testDataSet_clean )
 prediction</code></pre>
-<pre><code>##  [1] E A A E A E E B A E A A B A E E E B E E
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
 </div>
 </div>
