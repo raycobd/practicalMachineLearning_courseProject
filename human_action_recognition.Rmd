@@ -112,8 +112,6 @@ testingModelData <- trainedVariables[-filter_training_data,]
 
 Now we are all set for train the model
 ```{r}
-library(doMC)
-registerDoMC(cores = 8)
 modFit <- train(classe ~ ., data = trainingModelData, method = "rf",trControl=trainControl(method='cv'))
 ```
 

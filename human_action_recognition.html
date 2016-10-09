@@ -211,12 +211,7 @@ filter_training_data &lt;- createDataPartition(y=trainingDataSet_clean$classe,p=
 trainingModelData &lt;- trainedVariables[filter_training_data,]
 testingModelData &lt;- trainedVariables[-filter_training_data,]</code></pre>
 <p>Now we are all set for train the model</p>
-<pre class="r"><code>library(doMC)</code></pre>
-<pre><code>## Loading required package: foreach</code></pre>
-<pre><code>## Loading required package: iterators</code></pre>
-<pre><code>## Loading required package: parallel</code></pre>
-<pre class="r"><code>registerDoMC(cores = 8)
-modFit &lt;- train(classe ~ ., data = trainingModelData, method = &quot;rf&quot;,trControl=trainControl(method='cv'))</code></pre>
+<pre class="r">modFit &lt;- train(classe ~ ., data = trainingModelData, method = &quot;rf&quot;,trControl=trainControl(method='cv'))</code></pre>
 </div>
 </div>
 <div id="cross-validation" class="section level3">
